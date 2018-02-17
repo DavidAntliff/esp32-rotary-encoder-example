@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 #include "esp_system.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
@@ -23,9 +24,9 @@
 #define DIR_CCW 0x20
 
 typedef struct {
-    unsigned char state;
-    unsigned char pin_a;
-    unsigned char pin_b;
+    uint8_t state;
+    uint8_t pin_a;
+    uint8_t pin_b;
 } rotary_encoder_t;
 
 // Based on https://github.com/buxtronix/arduino/tree/master/libraries/Rotary
@@ -125,28 +126,22 @@ const uint8_t ttable[6][4] = {
 };
 #else
 // Use the full-step state table (emits a code at 00 only)
-#  define R_CW_FINAL 0x1
-#  define R_CW_BEGIN 0x2
-#  define R_CW_NEXT 0x3
+#  define R_CW_FINAL  0x1
+#  define R_CW_BEGIN  0x2
+#  define R_CW_NEXT   0x3
 #  define R_CCW_BEGIN 0x4
 #  define R_CCW_FINAL 0x5
-#  define R_CCW_NEXT 0x6
+#  define R_CCW_NEXT  0x6
 
 const uint8_t ttable[7][4] = {
-    // R_START
-    {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
-    // R_CW_FINAL
-    {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},
-    // R_CW_BEGIN
-    {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},
-    // R_CW_NEXT
-    {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},
-    // R_CCW_BEGIN
-    {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},
-    // R_CCW_FINAL
-    {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},
-    // R_CCW_NEXT
-    {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},
+    // 00        01           10           11                  // BA
+    {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},           // R_START
+    {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},  // R_CW_FINAL
+    {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},           // R_CW_BEGIN
+    {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},           // R_CW_NEXT
+    {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},           // R_CCW_BEGIN
+    {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW}, // R_CCW_FINAL
+    {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},           // R_CCW_NEXT
 };
 #endif
 
@@ -160,19 +155,30 @@ static rotary_encoder_t rotary_init(gpio_num_t pin_a, gpio_num_t pin_b)
     return rotenc;
 }
 
+// handle inverted pins
+static int get_pin(gpio_num_t gpio)
+{
+    return gpio_get_level(gpio);
+//    return 1 - gpio_get_level(gpio);
+}
+
 uint8_t rotary_process(rotary_encoder_t * rotenc)
 {
     uint8_t event = 0;
     if (rotenc != NULL)
     {
         // Get state of input pins.
-        unsigned char pin_state = (gpio_get_level(rotenc->pin_b) << 1) | gpio_get_level(rotenc->pin_a);
-
+        uint8_t pin_state = (get_pin(rotenc->pin_b) << 1) | get_pin(rotenc->pin_a);
+        uint8_t old_state = rotenc->state;
+        //ESP_EARLY_LOGD(TAG, "BA %d%d, state 0x%02x", pin_state >> 1, pin_state & 1, rotenc->state);
         // Determine new state from the pins and state table.
         rotenc->state = ttable[rotenc->state & 0xf][pin_state];
-
         // Return emit bits, i.e. the generated event.
         event = rotenc->state & 0x30;
+        //ESP_EARLY_LOGD(TAG, "new state 0x%02x, event %d", rotenc->state, event);
+
+        //ESP_EARLY_LOGD(TAG, "BA %d%d, state 0x%02x, new state 0x%02x, event %d", pin_state >> 1, pin_state & 1, old_state, rotenc->state, event);
+
     }
     return event;
 }
@@ -202,20 +208,27 @@ static void isr_rotenc_b(void * args)
     ESP_EARLY_LOGI(TAG, "B%d", level);
 }
 #else  // DIRECT
+static QueueHandle_t q1;
 static void isr_rotenc_process(void * args)
 {
-    ESP_EARLY_LOGD(TAG, "intr");
+    static uint32_t led = 0;
+    gpio_set_level(ONBOARD_LED_GPIO, led);
+    led = led ? 0 : 1;
+
+    //ESP_EARLY_LOGD(TAG, "intr");
     knob_with_reset_t * knob = (knob_with_reset_t *)args;
     uint8_t event = rotary_process(&knob->rotenc);
     switch (event)
     {
     case DIR_CW:
         ++knob->position;
-        ESP_EARLY_LOGI(TAG, "%d", knob->position);
+        //ESP_EARLY_LOGI(TAG, "%d", knob->position);
+        xQueueSendToBackFromISR(q1, &knob->position, NULL);
         break;
     case DIR_CCW:
         --knob->position;
-        ESP_EARLY_LOGI(TAG, "%d", knob->position);
+        //ESP_EARLY_LOGI(TAG, "%d", knob->position);
+        xQueueSendToBackFromISR(q1, &knob->position, NULL);
         break;
     default:
         break;
@@ -227,8 +240,9 @@ static void isr_rotenc_sw(void * args)
     knob_with_reset_t * knob = (knob_with_reset_t *)args;
     if (gpio_get_level(ROT_ENC_SW_GPIO) == 0)  // inverted
     {
-        ESP_EARLY_LOGI(TAG, "reset");
         knob->position = 0;
+        //ESP_EARLY_LOGI(TAG, "reset");
+        xQueueSendToBackFromISR(q1, &knob->position, NULL);
     }
 }
 #endif  // DIRECT
@@ -266,6 +280,19 @@ static void main_task(void * pvParameter)
 #endif  // DIRECT
 
 //    int32_t counter = 0;
+
+    q1 = xQueueCreate(10, sizeof(((knob_with_reset_t *)0)->position));
+
+    while(1)
+    {
+        int32_t value = 0;
+        BaseType_t rc = xQueueReceive(q1, &value, portMAX_DELAY);
+        if (rc == pdTRUE)
+        {
+            ESP_LOGI(TAG, "%d", value);
+        }
+    }
+
 	while(1)
 	{
 		gpio_set_level(ONBOARD_LED_GPIO, 0);
