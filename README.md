@@ -2,6 +2,8 @@
 
 This project is a simple demonstration of using a rotary encoder to track relative position, with a reset switch to reset the position.
 
+Typically this kind of rotary encoder has five pins, although other versions with as few as three pins may work too. The device used for testing is the one supplied with the KY-040 rotary encoder, as mentioned [here](http://henrysbench.capnfatz.com/henrys-bench/arduino-sensors-and-input/keyes-ky-040-arduino-rotary-encoder-user-manual/).
+
 Debouncing is performed by a state machine that ensures correct tracking of direction, and emits a directional event only at the resting states.
 
 ## Circuit
@@ -32,4 +34,4 @@ The state machine is designed to operate with inverted values of the rotary enco
 
 Power should be supplied to the rotary encoder on pin + otherwise the transitional levels are floating, which causes multiple interrupts to fire on the ESP32 input.
 
-The KY-040 rotary encoder (as mentioned [here](http://henrysbench.capnfatz.com/henrys-bench/arduino-sensors-and-input/keyes-ky-040-arduino-rotary-encoder-user-manual/)) is quite noisy and although this code does a fairly good job, there are some occasional missed events. This is mitigated with some analogue filtering on the A and B outputs of the rotary encoder. For example, a pair of 100nF capacitors from ground to pin A and B works well enough for me.
+The KY-040 rotary encoder is quite noisy and although this code does a fairly good job, there are some occasional missed events. This is mitigated with some analogue filtering on the A and B outputs of the rotary encoder. For example, a pair of 100nF capacitors from ground to pin A and B works well enough for me.
