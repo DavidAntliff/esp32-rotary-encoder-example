@@ -1,7 +1,7 @@
 # ESP32 Rotary Encoder Example
 
 [![Build Status](https://travis-ci.org/DavidAntliff/esp32-rotary-encoder-example.svg?branch=master)](https://travis-ci.org/DavidAntliff/esp32-rotary-encoder-example)
-[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 This is a demonstration of using the [esp32-rotary-encoder](https://github.com/DavidAntliff/esp32-rotary-encoder) driver to track the relative position of an [incremental](https://en.wikipedia.org/wiki/Rotary_encoder#Incremental) rotary encoder.
 
