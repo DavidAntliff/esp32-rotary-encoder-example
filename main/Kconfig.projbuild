@@ -1,12 +1,5 @@
 menu "esp32-rotary-encoder Configuration"
 
-config ONBOARD_LED_GPIO
-    int "Onboard LED GPIO number"
-    range 0 34
-    default 2
-    help
-        GPIO number (IOxx) connected to onboard LED.
-
 config ROT_ENC_A_GPIO
     int "Rotary Encoder A output GPIO number"
 	range 0 39
@@ -22,15 +15,6 @@ config ROT_ENC_B_GPIO
 	default 26
 	help
 		GPIO number (IOxx) from which to sample the Rotary Encoder 'B' output.
-
-		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
-
-config ROT_ENC_SW_GPIO
-    int "Rotary Encoder switch output GPIO number"
-	range 0 39
-	default 25
-	help
-		GPIO number (IOxx) from which to sample the Rotary Encoder switch output.
 
 		Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used.
 
