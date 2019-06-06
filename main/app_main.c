@@ -35,14 +35,14 @@
 #define ROT_ENC_A_GPIO (CONFIG_ROT_ENC_A_GPIO)
 #define ROT_ENC_B_GPIO (CONFIG_ROT_ENC_B_GPIO)
 
-#define ENABLE_HALF_STEPS true  // Set to true to enable tracking of rotary encoder at half step resolution
+#define ENABLE_HALF_STEPS false  // Set to true to enable tracking of rotary encoder at half step resolution
 #define RESET_AT          0      // Set to a positive non-zero number to reset the position if this value is exceeded
-#define FLIP_DIRECTION    true  // Set to true to reverse the clockwise/counterclockwise sense
+#define FLIP_DIRECTION    false  // Set to true to reverse the clockwise/counterclockwise sense
 
 void app_main()
 {
     // esp32-rotary-encoder requires that the GPIO ISR service is installed before calling rotary_encoder_register()
-    gpio_install_isr_service(0);
+    ESP_ERROR_CHECK(gpio_install_isr_service(0));
 
     // Initialise the rotary encoder device with the GPIOs for A and B signals
     rotary_encoder_info_t info = { 0 };
@@ -70,7 +70,7 @@ void app_main()
         {
             // Poll current position and direction
             rotary_encoder_state_t state = { 0 };
-            rotary_encoder_get_state(&info, &state);
+            ESP_ERROR_CHECK(rotary_encoder_get_state(&info, &state));
             ESP_LOGI(TAG, "Poll: position %d, direction %s", state.position,
                      state.direction ? (state.direction == ROTARY_ENCODER_DIRECTION_CLOCKWISE ? "CW" : "CCW") : "NOT_SET");
 
