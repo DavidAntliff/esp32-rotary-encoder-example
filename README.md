@@ -46,7 +46,7 @@ The source is available from [GitHub](https://www.github.com/DavidAntliff/esp32-
 
 ## License
 
-This code is also licensed under the GNU GPL Version 3, or (at your option) any later version.
+The code in this project is licensed under the GNU GPL Version 3, or (at your option) any later version. - see [LICENSE](LICENSE) for details.
 
 ## Notes
 
