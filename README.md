@@ -6,7 +6,7 @@
 
 This is a demonstration of using the [esp32-rotary-encoder](https://github.com/DavidAntliff/esp32-rotary-encoder) driver to track the relative position of an [incremental](https://en.wikipedia.org/wiki/Rotary_encoder#Incremental) rotary encoder.
 
-It is written and tested for v3.0-v3.2 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0). It may or may not work with older or newer versions.
+It is written and tested for v3.3 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0). It may or may not work with older or newer versions.
 
 Ensure that submodules are cloned:
 
@@ -15,8 +15,8 @@ Ensure that submodules are cloned:
 Build the application with:
 
     $ cd esp32-rotary-encoder-example.git
-    $ make menuconfig    # set your serial configuration and the Rotary Encoder GPIO - see Circuit below
-    $ make flash monitor
+    $ idf.py menuconfig    # set your serial configuration and the Rotary Encoder GPIO - see Circuit below
+    $ idf.py -p (PORT) flash monitor
 
 Typically this kind of rotary encoder has at least four pins - +ve supply, ground, and two quadrature pins labelled CLK (or A) and DT (or B). The device used for testing is the one supplied with the KY-040 rotary encoder, as mentioned [here](http://henrysbench.capnfatz.com/henrys-bench/arduino-sensors-and-input/keyes-ky-040-arduino-rotary-encoder-user-manual/).
 
@@ -34,7 +34,7 @@ This application makes use of the following components (included as submodules):
 1. Connect + to the ESP32 3.3V output.
 1. Connect DT (pin B) to an ESP32 GPIO.
 1. Connect CLK (pin A) to an ESP32 GPIO.
-1. Use `make menuconfig` to configure the correct ESP32 GPIOs according to the previous connections.
+1. Use `idf.py menuconfig` to configure the correct ESP32 GPIOs according to the previous connections.
 
 1. Optional: connect a 100nF capacitor between DT and GND for electrical smoothing.
 1. Optional: connect a 100nF capacitor between CLK and GND for electrical smoothing.
